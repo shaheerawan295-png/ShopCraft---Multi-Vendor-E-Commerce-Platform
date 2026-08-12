@@ -11,7 +11,7 @@ import { upload } from "../config/cloudinary.js";
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize("vendor"));
+router.use(authorize("vendor", "admin"));
 
 router.route("/")
   .post(upload.array("images", 5), createProduct)

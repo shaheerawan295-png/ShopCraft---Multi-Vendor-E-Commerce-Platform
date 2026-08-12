@@ -4,9 +4,6 @@ import Order from "../models/Order.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ----------------------------------------------------
-// 1. Stripe Payment Intent (Create Client Secret)
-// ----------------------------------------------------
 export const createPaymentIntent = async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -15,16 +12,25 @@ export const createPaymentIntent = async (req, res) => {
       return res.status(400).json({ success: false, message: "Order ID is required" });
     }
 
-    const order = await Order.findById(orderId);
+const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    const amountInCents = Math.round(order.totalAmount * 100);
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to pay for this order" });
+    }
+
+    const amountInMinorUnits = Math.round(Number(order.totalAmount || 0) * 100);
+    if (amountInMinorUnits <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Order total must be greater than zero" });
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: "usd",
+      amount: amountInMinorUnits,
+      currency: "pkr",
       metadata: {
         orderId: order._id.toString(),
         customerId: req.user?._id ? req.user._id.toString() : "guest",
@@ -40,9 +46,6 @@ export const createPaymentIntent = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// 2. Stripe Card Payment Confirmation
-// ----------------------------------------------------
 export const confirmStripePayment = async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -51,15 +54,23 @@ export const confirmStripePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Order ID is required" });
     }
 
-    const order = await Order.findById(orderId);
+const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to pay for this order" });
+    }
+
+    if (order.paymentStatus === "Paid") {
+      return res.status(400).json({ success: false, message: "This order has already been paid" });
     }
 
     order.paymentMethod = "Stripe Card";
     order.paymentStatus = "Paid";
     order.isPaid = true;
-    order.paidAt = Date.now();
+    order.paidAt = new Date();
     order.overallStatus = "Processing";
 
     await order.save();
@@ -74,9 +85,6 @@ export const confirmStripePayment = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// 3. Local Wallet Manual Payment (Direct PIN)
-// ----------------------------------------------------
 export const processLocalWalletPayment = async (req, res) => {
   try {
     const { orderId, walletType, mobileNumber, accountPin } = req.body;
@@ -88,15 +96,23 @@ export const processLocalWalletPayment = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(orderId);
+const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to pay for this order" });
+    }
+
+    if (order.paymentStatus === "Paid") {
+      return res.status(400).json({ success: false, message: "This order has already been paid" });
     }
 
     order.paymentMethod = walletType || "Local Wallet";
     order.paymentStatus = "Paid";
     order.isPaid = true;
-    order.paidAt = Date.now();
+    order.paidAt = new Date();
     order.overallStatus = "Processing";
 
     await order.save();
@@ -111,9 +127,6 @@ export const processLocalWalletPayment = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// 4. Firebase OTP Verified Wallet Payment (JazzCash/EasyPaisa via SMS)
-// ----------------------------------------------------
 export const verifyFirebaseOtp = async (req, res) => {
   try {
     const { idToken, orderId, walletType } = req.body;
@@ -125,7 +138,13 @@ export const verifyFirebaseOtp = async (req, res) => {
       });
     }
 
-    // Firebase Admin Auth Token Verification
+    if (!adminAuth) {
+      return res.status(503).json({
+        success: false,
+        message: "Wallet OTP payments are not configured on this server",
+      });
+    }
+
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
     if (!decodedToken) {
@@ -135,15 +154,23 @@ export const verifyFirebaseOtp = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(orderId);
+const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Not authorized to pay for this order" });
+    }
+
+    if (order.paymentStatus === "Paid") {
+      return res.status(400).json({ success: false, message: "This order has already been paid" });
     }
 
     order.paymentMethod = walletType || "JazzCash / EasyPaisa (OTP)";
     order.paymentStatus = "Paid";
     order.isPaid = true;
-    order.paidAt = Date.now();
+    order.paidAt = new Date();
     order.overallStatus = "Processing";
     order.paymentResult = {
       id: decodedToken.uid,

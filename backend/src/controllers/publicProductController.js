@@ -1,5 +1,8 @@
 import Product from "../models/Product.js";
 
+const escapeRegex = (str) =>
+  String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export const getPublicProducts = async (req, res) => {
   try {
     const {
@@ -12,9 +15,10 @@ export const getPublicProducts = async (req, res) => {
     } = req.query;
     let query = { isPublished: true };
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
       ];
     }
     if (category) {
@@ -43,7 +47,9 @@ const pageNum = Math.max(1, Number(page) || 1);
       products,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res
+      .status(error.name === "CastError" ? 400 : 500)
+      .json({ success: false, message: error.message });
   }
 };
 
@@ -65,6 +71,8 @@ export const getSingleProduct = async (req, res) => {
       product,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res
+      .status(error.name === "CastError" ? 400 : 500)
+      .json({ success: false, message: error.message });
   }
 };

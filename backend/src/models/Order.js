@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-// Single Order Item Sub-schema
 const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,7 +16,6 @@ const orderItemSchema = new mongoose.Schema({
   },
 });
 
-// Vendor Sub-Order Schema (Each vendor manages their own status)
 const vendorOrderSchema = new mongoose.Schema({
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
@@ -28,12 +26,24 @@ const vendorOrderSchema = new mongoose.Schema({
   subtotal: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled", "Cancellation Requested"],
     default: "Pending",
+  },
+  previousStatus: {
+    type: String,
+    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+  },
+  courierName: { type: String },
+  trackingId: { type: String },
+  cancelReason: { type: String },
+  cancellationReason: { type: String },
+  cancellationStatus: {
+    type: String,
+    enum: ["None", "Requested", "Approved", "Rejected"],
+    default: "None",
   },
 });
 
-// Main Order Schema
 const orderSchema = new mongoose.Schema(
   {
     customer: {
@@ -41,8 +51,9 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    items: [orderItemSchema], // Complete list of items in cart
-    vendorOrders: [vendorOrderSchema], // Split sub-orders per vendor
+    items: [orderItemSchema],
+    vendorOrders: [vendorOrderSchema],
+    currency: { type: String, enum: ["PKR"], default: "PKR" },
     totalAmount: { type: Number, required: true },
     shippingAddress: {
       fullName: { type: String, required: true },
@@ -70,11 +81,31 @@ const orderSchema = new mongoose.Schema(
       enum: ["Pending", "Paid", "Failed"],
       default: "Pending",
     },
-    overallStatus: {
+overallStatus: {
       type: String,
-      enum: ["Pending", "Processing", "Completed", "Cancelled"],
+      enum: ["Pending", "Processing", "Completed", "Cancelled", "Cancellation Requested"],
       default: "Pending",
     },
+    previousOverallStatus: {
+      type: String,
+      enum: ["Pending", "Processing", "Completed", "Cancelled", "Cancellation Requested"],
+    },
+    cancellationReason: { type: String },
+    cancellationStatus: {
+      type: String,
+      enum: ["None", "Requested", "Approved", "Rejected"],
+      default: "None",
+    },
+    isPaid: { type: Boolean, default: false },
+    paidAt: { type: Date },
+    couponCode: { type: String, trim: true, uppercase: true },
+    discountAmount: { type: Number, default: 0, min: 0 },
+    paymentResult: {
+      id: { type: String },
+      status: { type: String },
+      phone: { type: String },
+    },
+    isDeletedByUser: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

@@ -14,7 +14,6 @@ router.post("/google",googleLogin);
 router.post("/logout",logoutUser)
 
 
-// this is protected route.. just for loggedIn user with JWT token..
 router.get("/me", protect, getMe);
 
 export default router;

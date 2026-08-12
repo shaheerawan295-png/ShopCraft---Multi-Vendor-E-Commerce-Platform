@@ -10,7 +10,6 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 export const googleLogin = async (req, res) => {
   try {
     const idToken = req.body.idToken || req.body.token || req.body.credential;
-    // Only allow customer/vendor roles from client — never admin
     const requestedRole = req.body.role;
     const role =
       requestedRole === "vendor" || requestedRole === "customer"
@@ -57,7 +56,6 @@ const userExits = await User.findOne({ email });
         .status(400)
         .json({ message: "User already exists with this email.." });
     }
-    // Only allow customer/vendor roles from client — never admin
     const safeRole =
       role === "vendor" || role === "customer" ? role : "customer";
     const user = await User.create({
@@ -72,7 +70,8 @@ const userExits = await User.findOne({ email });
       res.status(400).json({ message: "Invalid user data received.." });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    const statusCode = error.name === "ValidationError" ? 400 : 500;
+    res.status(statusCode).json({ message: error.message });
   }
 };
 
@@ -160,8 +159,6 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// send otp for login passwordless.................
-
 export const sendLoginOTP = async (req, res) => {
   try {
     const { email } = req.body;
@@ -197,8 +194,6 @@ export const sendLoginOTP = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// verify login otp and issue token ...........
 
 export const verifyLoginOTP = async (req, res) => {
   try {
@@ -236,6 +231,7 @@ export const getMe = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      isApproved: user.isApproved,
       address: user.address,
       createdAt: user.createdAt,
     });
@@ -244,7 +240,6 @@ export const getMe = async (req, res) => {
   }
 };
 
-// for deleteion of cookie token...
 export const logoutUser = async (req, res) => {
   try {
     res.clearCookie("token");

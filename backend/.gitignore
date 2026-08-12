@@ -1,1 +1,23 @@
+# Dependency folders
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Firebase / sensitive files
 *serviceAccountKey.json
+
+# Build and logs
+.next/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store

@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
         enum : ['customer','vendor','admin'],
         default : 'customer',
     },
+    isApproved: {
+      type: Boolean,
+      default: true,
+    },
     address:{
       street: { type: String },
       city: { type: String },

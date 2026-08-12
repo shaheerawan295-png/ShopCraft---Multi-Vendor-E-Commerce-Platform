@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
 
 const sendEmail = async (options)=>{
-    console.log("Email User Check:", process.env.EMAIL_USER); // just for debugging.....
     const transporter = nodemailer.createTransport({
         service : "Gmail",
         auth : {
