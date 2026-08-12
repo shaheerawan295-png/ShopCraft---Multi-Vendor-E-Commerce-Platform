@@ -21,3 +21,7 @@ yarn-error.log*
 
 # OS files
 .DS_Store
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+.envgit rm -r --cached 
