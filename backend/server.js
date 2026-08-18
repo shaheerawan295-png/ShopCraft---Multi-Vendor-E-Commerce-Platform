@@ -1,5 +1,5 @@
-// import dotenv from "dotenv";
-// dotenv.config();
+import dotenv from "dotenv";
+dotenv.config();
 
 import express from "express";
 import cors from "cors";
@@ -60,10 +60,10 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-if (!process.env.VERCEL) {
+
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => { 
     console.log(`Server successfully running on port ${PORT}`);
   });
-}
+
 export default app;
